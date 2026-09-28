@@ -1,0 +1,29 @@
+# The persistent Chromium profile holds your CNKI cookies, including your login.
+# Never commit it.
+.cnki-mcp/
+chrome-profile/
+
+# Downloaded papers (CNKI content is not ours to redistribute)
+*.pdf
+*.caj
+*.nh
+papers/
+downloads/
+
+# Backups created by the patch script
+*.orig
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Editors / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
