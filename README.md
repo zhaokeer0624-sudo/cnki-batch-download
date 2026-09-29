@@ -1,13 +1,14 @@
-# cnki-batch-download
+# cnki
 
-Bulk-download papers from CNKI (中国知网) as PDFs, by criteria: sort by citation count or
-relevance, filter by journal, author or year, save the top N. Runs through a real browser
-profile that keeps one login, so it works with a personal account as well as a university one.
+Save CNKI (中国知网) papers as PDFs through the `cnki-mcp` MCP server — one specific paper, or
+many at once by criteria: sort by citation count or relevance, filter by journal, author or
+year, save the top N. Runs through a real browser profile that keeps one login, so it works
+with a personal account as well as a university one.
 
-Three pieces:
+Two pieces:
 
-- `skill/cnki-batch-download/` — search by criteria → confirm a shortlist → download
-- `skill/cnki-download/` — save a single paper
+- `skill/cnki/` — one skill, two modes: save a single paper, or search by criteria → confirm a
+  shortlist → download the batch
 - `patch_cnki_mcp.py` — plumbing: makes [`cnki-mcp`](https://github.com/NoFixedPoint/cnki-mcp)
   survive CNKI's captcha and article pages, which unpatched it does not
 
@@ -60,12 +61,17 @@ expires the session — not on every run.
 
 Plain language — the criteria come from the conversation, not from a config file:
 
+> 把这篇知网论文下载下来：《数字人民币的跨境支付清算机制》，存到 D:\Research\papers
+
 > 搜「数字人民币 跨境支付」，按被引排序，限《金融研究》和《经济研究》，2019 年以后，下前 15 篇到 D:\Research\papers
 
 > Download the top 20 most-cited papers on RMB internationalization.
 
 `search_cnki` already exposes `sort` (被引 / 相关度 / 发表时间 / 下载 / 综合), `journal`,
 `author` and `pages`, so "sort by citations and take the top N" needs no code.
+
+**You supply the destination.** Every download takes a `save_dir` from the request — no folder
+is chosen for you, so state where the PDFs should land.
 
 ## Why the patch
 
@@ -100,7 +106,7 @@ user-agent rotation.
 
 ## Limits
 
-Enforced by the batch skill, not optional: **≤ 20 papers per run**, one run at a time,
+Enforced by the skill's batch mode, not optional: **≤ 20 papers per run**, one run at a time,
 **3–6 s between downloads**, and a shortlist-confirm step before anything is fetched. CNKI
 accounts have download quotas, and bulk downloading is the behaviour most likely to breach
 CNKI's terms and to get a shared institutional IP range — or your own account — rate-limited.
@@ -122,4 +128,4 @@ redistributed here.
 
 ---
 
-按条件批量下载知网论文：按被引或相关度排序，限定期刊、作者、年份，存前 N 篇为 PDF。通过真实浏览器 profile 运行，校内外一致；机构账号或个人账号均可。批量默认限速、每批 ≤ 20 篇，请勿过量抓取以免账号或机构 IP 被限流。
+下载知网论文 PDF：单篇直接存，或按条件批量——按被引或相关度排序，限定期刊、作者、年份，存前 N 篇。通过真实浏览器 profile 运行，校内外一致；机构账号或个人账号均可。批量默认限速、每批 ≤ 20 篇，请勿过量抓取以免账号或机构 IP 被限流。
