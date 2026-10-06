@@ -32,6 +32,17 @@ Patch 2 — reliable navigation
     After patching they use `wait_until="domcontentloaded", timeout=60000`, plus
     a bounded wait for the PDF button (`a#pdfDown`), which DOM-ready can precede.
 
+Patch 3 — keep the CNKI browser off the system proxy
+    Chromium honours the Windows system proxy. If a system-wide proxy is on
+    (e.g. Clash at 127.0.0.1:7897, common when a machine needs one for GitHub
+    and other blocked hosts), CNKI gets routed to `oversea.cnki.net` — the
+    overseas portal — and `search_cnki` silently returns zero results.
+
+    The fix is scoped to *this one browser*: launch it with `--no-proxy-server`
+    so CNKI is always reached directly. This deliberately does NOT touch the
+    user's system proxy or their proxy client — turning those off to fix CNKI
+    would break every other tool that needs them.
+
 Usage
 -----
     python patch_cnki_mcp.py                 # patch the installed copy
@@ -40,7 +51,7 @@ Usage
     python patch_cnki_mcp.py --target PATH   # patch a specific file
 
 Run `--check` after any `pip install`/upgrade of cnki-mcp: a reinstall
-overwrites the module and silently reverts both patches.
+overwrites the module and silently reverts all three patches.
 
 Note: `download_paper_pdf` still needs whatever access your CNKI account carries
 (institutional or personal), and the browser window will appear on your desktop
@@ -185,6 +196,10 @@ POOL_NEW = '''class BrowserPool:
             headless=_cfg_flag("CNKI_MCP_HEADLESS", False),
             viewport=None,
             args=[
+                # CNKI is a domestic site; a system-wide proxy routes it to
+                # oversea.cnki.net and every search returns zero rows. Bypass the
+                # proxy for this browser only — never disable the system proxy.
+                "--no-proxy-server",
                 "--disable-blink-features=AutomationControlled",
                 "--disable-dev-shm-usage",
                 "--no-sandbox",
@@ -262,6 +277,22 @@ BUTTON_NEW = """    # Find PDF download button (DOM-ready can precede the button
         pass
     pdf_btn = await page.query_selector("a#pdfDown")"""
 
+# --------------------------------------------------------------------------- #
+# Patch 3 — keep the CNKI browser off the system proxy
+# --------------------------------------------------------------------------- #
+
+# Anchored on the patched (persistent-context) arg list, so it can never hit the
+# upstream headless `launch(...)` args.
+PROXY_OLD = '''            args=[
+                "--disable-blink-features=AutomationControlled",'''
+
+PROXY_NEW = '''            args=[
+                # CNKI is a domestic site; a system-wide proxy routes it to
+                # oversea.cnki.net and every search returns zero rows. Bypass the
+                # proxy for this browser only — never disable the system proxy.
+                "--no-proxy-server",
+                "--disable-blink-features=AutomationControlled",'''
+
 
 # --------------------------------------------------------------------------- #
 # Helpers
@@ -287,6 +318,10 @@ def patch_1_done(src: str) -> bool:
 
 def patch_2_done(src: str) -> bool:
     return not GOTO_RE.search(src) and 'wait_for_selector("a#pdfDown"' in src
+
+
+def patch_3_done(src: str) -> bool:
+    return '"--no-proxy-server"' in src
 
 
 def apply_patches(src: str) -> tuple[str, list[str]]:
@@ -321,6 +356,16 @@ def apply_patches(src: str) -> tuple[str, list[str]]:
     else:
         notes.append("patch 2b (PDF button wait): SKIPPED — anchor not found")
 
+    # --- patch 3: keep the browser off the system proxy ---
+    if patch_3_done(src):
+        notes.append("patch 3 (no-proxy-server): already applied")
+    elif PROXY_OLD in src:
+        src = src.replace(PROXY_OLD, PROXY_NEW, 1)
+        notes.append("patch 3 (no-proxy-server): APPLIED")
+    else:
+        notes.append("patch 3 (no-proxy-server): SKIPPED — patched arg list not found "
+                     "(apply patch 1 first)")
+
     return src, notes
 
 
@@ -347,10 +392,11 @@ def main() -> int:
     if args.check:
         print(f"patch 1 (persistent headed profile): {'applied' if patch_1_done(src) else 'NOT applied'}")
         print(f"patch 2 (reliable navigation)      : {'applied' if patch_2_done(src) else 'NOT applied'}")
+        print(f"patch 3 (no-proxy-server)          : {'applied' if patch_3_done(src) else 'NOT applied'}")
         print(f"backup : {'present' if os.path.isfile(backup) else 'missing'} ({backup})")
         return 0
 
-    if patch_1_done(src) and patch_2_done(src):
+    if patch_1_done(src) and patch_2_done(src) and patch_3_done(src):
         print("already fully patched — nothing to do")
         return 0
 

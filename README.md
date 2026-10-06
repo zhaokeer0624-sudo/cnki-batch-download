@@ -83,6 +83,12 @@ Unpatched `cnki-mcp` cannot download at all:
 - **Article pages** — all 11 `page.goto(...)` use `wait_until="load"`, which never fires on
   CNKI pages because they pull third-party resources that never finish; `goto()` times out
   at 30 s. Fixed with `domcontentloaded` and a 60 s timeout.
+- **A system-wide proxy** — Chromium honours the Windows system proxy, so if one is on
+  (common when a machine needs it for GitHub and other blocked hosts) CNKI is routed to
+  `oversea.cnki.net` and every search silently returns zero rows. Fixed by launching *this
+  browser only* with `--no-proxy-server`. The patch deliberately does **not** touch your
+  system proxy or your proxy client — disabling those to fix CNKI would break every other
+  tool that depends on them.
 
 `patch_cnki_mcp.py` edits your installed module in place — no fork, no redistribution. It
 backs the original up to `.orig`, applies each patch only if absent, and refuses to write
@@ -115,7 +121,10 @@ Keep batches small.
 ## Notes
 
 - **Re-apply after upgrading `cnki-mcp`** — `pip install` overwrites the module and
-  silently reverts the patch. Run `--check`.
+  silently reverts all three patches. Run `--check`.
+- **If searches return nothing, check the proxy first.** Zero rows is the signature of the
+  CNKI browser being routed overseas, not of a bad query. `--check` should show patch 3
+  applied; the fix belongs to this browser, never to the system proxy.
 - **The profile holds your CNKI login.** `~/.cnki-mcp/chrome-profile` is a credential; do
   not sync or commit it. (`.gitignore` excludes it.)
 - **Download paths must be writable.** On Windows, a folder in a drive root (`D:\papers`)
